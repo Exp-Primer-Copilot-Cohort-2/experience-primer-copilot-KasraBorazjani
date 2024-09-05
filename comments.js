@@ -1,31 +1,41 @@
-// create web server 
+// Create web server 
 
+// Importing the required modules
 const express = require('express');
-const bodyParser = require('body-parser');
-const { randomBytes } = require('crypto');
-const cors = require('cors');
-
 const app = express();
+const bodyParser = require('body-parser');
+const path = require('path');
+const fs = require('fs');
+
+// Configuration
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
+// Middleware
 app.use(bodyParser.json());
-app.use(cors());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-const commentsByPostId = {};
-
-app.get('/posts/:id/comments', (req, res) => {
-  res.send(commentsByPostId[req.params.id] || []);
+// Routes
+app.get('/', (req, res) => {
+    res.render('index');
 });
 
-app.post('/posts/:id/comments', (req, res) => {
-  const commentId = randomBytes(4).toString('hex');
-  const { content } = req.body;
-
-  const comments = commentsByPostId[req.params.id] || [];
-  comments.push({ id: commentId, content });
-  commentsByPostId[req.params.id] = comments;
-
-  res.status(201).send(comments);
+app.post('/comments', (req, res) => {
+    const comment = req.body.comment;
+    const comments = fs.readFileSync('comments.json', 'utf-8');
+    const commentsArray = JSON.parse(comments);
+    commentsArray.push(comment);
+    fs.writeFileSync('comments.json', JSON.stringify(commentsArray));
+    res.redirect('/comments');
 });
 
-app.listen(4001, () => {
-  console.log('Listening on 4001');
+app.get('/comments', (req, res) => {
+    const comments = fs.readFileSync('comments.json', 'utf-8');
+    const commentsArray = JSON.parse(comments);
+    res.render('comments', { comments: commentsArray });
+});
+
+// Server
+app.listen(3000, () => {
+    console.log('Server listening on port 3000');
 });
